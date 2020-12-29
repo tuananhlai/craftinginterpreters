@@ -1,0 +1,15 @@
+class Animal {
+    init(food, legs) {
+        this.food = food;
+        this.legs = legs;
+    }
+
+    eat() {
+        print "I am eating " + this.food + "!";
+    }
+}
+
+var a = Animal("wheat", 4);
+
+a.eat();
+
