@@ -29,7 +29,49 @@ class Parser {
     }
 
     private Expr expression() {
-        return equality();
+        return comma();
+    }
+
+    /**
+     * Support comma operator (ex. a = 1, b += a )
+     * 
+     * @return
+     */
+    private Expr comma() {
+        Expr expr = ternary();
+
+        while (match(COMMA)) {
+            Token operator = previous();
+            Expr right = comparison();
+            expr = new Expr.Binary(expr, operator, right);
+        }
+
+        return expr;
+    }
+
+    private Expr ternary() {
+        Expr expr = equality();
+
+        // if (match(QUESTION)) {
+        // Expr second = equality();
+        // consume(COLON, "Expect ':'");
+        // if (isAtEnd()) {
+        // throw error(peek(), "Expect expression for ternary operator");
+        // }
+        // return new Expr.Ternary(new Token(TERNARY, "?:", null, peek().line), expr,
+        // second, equality());
+        // }
+
+        if (match(QUESTION)) {
+            Expr second = ternary();
+            consume(COLON, "Expect ':'");
+            if (isAtEnd()) {
+                throw error(peek(), "Expect expression for ternary operator");
+            }
+            return new Expr.Ternary(new Token(TERNARY, "?:", null, peek().line), expr, second, ternary());
+        }
+
+        return expr;
     }
 
     private Expr equality() {

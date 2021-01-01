@@ -2,6 +2,7 @@ package com.craftint.lox;
 
 import com.craftint.lox.Expr.Binary;
 import com.craftint.lox.Expr.Grouping;
+import com.craftint.lox.Expr.Ternary;
 import com.craftint.lox.Expr.Visitor;
 
 class AstPrinter implements Expr.Visitor<String> {
@@ -42,6 +43,11 @@ class AstPrinter implements Expr.Visitor<String> {
         builder.append(")");
 
         return builder.toString();
+    }
+
+    @Override
+    public String visitTernaryExpr(Ternary expr) {
+        return parenthesize(expr.operator.lexeme, expr.first, expr.second, expr.third);
     }
 
     public static void main(String[] args) {
@@ -91,6 +97,11 @@ class RpnPrinter implements Visitor<String> {
         builder.append(name);
 
         return builder.toString();
+    }
+
+    @Override
+    public String visitTernaryExpr(Ternary expr) {
+        return rpn(expr.operator.lexeme, expr.first, expr.second, expr.third);
     }
 
     public static void main(String[] args) {

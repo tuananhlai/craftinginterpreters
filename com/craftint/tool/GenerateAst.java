@@ -13,14 +13,15 @@ public class GenerateAst {
         }
         String outputDir = args[0];
         defineAst(outputDir, "Expr", Arrays.asList("Binary   : Expr left, Token operator, Expr right",
-                "Grouping : Expr expression", "Literal  : Object value", "Unary    : Token operator, Expr right"));
+                "Grouping : Expr expression", "Literal  : Object value", "Unary    : Token operator, Expr right",
+                "Ternary : Token operator, Expr first, Expr second, Expr third"));
     }
 
     private static void defineAst(String outputDir, String baseName, List<String> types) throws IOException {
         String path = outputDir + "/" + baseName + ".java";
         PrintWriter writer = new PrintWriter(path, "UTF-8");
 
-        writer.println("package com.craftinginterpreters.lox;");
+        writer.println("package com.craftint.lox;");
         writer.println();
         writer.println("import java.util.List;");
         writer.println();
