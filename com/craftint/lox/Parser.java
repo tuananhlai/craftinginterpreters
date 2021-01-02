@@ -42,25 +42,29 @@ class Parser {
 
         while (match(COMMA)) {
             Token operator = previous();
-            Expr right = comparison();
+            Expr right = ternary();
             expr = new Expr.Binary(expr, operator, right);
         }
 
         return expr;
     }
 
+    /**
+     * Support ternary operator (ex. 1 == 1 ? 1 : 2)
+     * 
+     * First, parse the firse expr with equality() to ensure right-associativity.
+     * Then, if the next token is a QuestionToken, parse the second expr
+     * recursively. Then, scan for a colon, if no colon found or the parser has
+     * reached EOF, throw error. Finally, return new ternary expr with TERNARY
+     * operator.
+     * 
+     * The precedence of ternary operator is based on
+     * https://en.cppreference.com/w/c/language/operator_precedence
+     * 
+     * @return
+     */
     private Expr ternary() {
-        Expr expr = equality();
-
-        // if (match(QUESTION)) {
-        // Expr second = equality();
-        // consume(COLON, "Expect ':'");
-        // if (isAtEnd()) {
-        // throw error(peek(), "Expect expression for ternary operator");
-        // }
-        // return new Expr.Ternary(new Token(TERNARY, "?:", null, peek().line), expr,
-        // second, equality());
-        // }
+        Expr condition = equality();
 
         if (match(QUESTION)) {
             Expr second = ternary();
@@ -68,10 +72,10 @@ class Parser {
             if (isAtEnd()) {
                 throw error(peek(), "Expect expression for ternary operator");
             }
-            return new Expr.Ternary(new Token(TERNARY, "?:", null, peek().line), expr, second, ternary());
+            return new Expr.Ternary(new Token(TERNARY, "?:", null, peek().line), condition, second, ternary());
         }
 
-        return expr;
+        return condition;
     }
 
     private Expr equality() {
