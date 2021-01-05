@@ -74,8 +74,9 @@ class Interpreter implements Expr.Visitor<Object> {
             case PLUS: // how about string concat?
                 if (left instanceof Double && right instanceof Double) {
                     return (double) left + (double) right;
-                } else if (left instanceof String && right instanceof String) {
-                    return (String) left + (String) right;
+                } else if (left instanceof String || right instanceof String) { // support + operator if either operand
+                                                                                // is a string
+                    return stringify(left) + stringify(right);
                 } else {
                     throw new RuntimeError(expr.operator, "Operands must be two numbers or two strings.");
                 }
