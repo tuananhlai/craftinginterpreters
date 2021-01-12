@@ -1,24 +1,39 @@
 package com.craftint.lox;
 
+import com.craftint.lox.Expr.Assign;
 import com.craftint.lox.Expr.Binary;
 import com.craftint.lox.Expr.Grouping;
 import com.craftint.lox.Expr.Literal;
 import com.craftint.lox.Expr.Ternary;
 import com.craftint.lox.Expr.Unary;
+import com.craftint.lox.Expr.Variable;
+
+import java.util.List;
+
 import com.craftint.lox.RuntimeError;
+import com.craftint.lox.Stmt.Block;
+import com.craftint.lox.Stmt.Expression;
+import com.craftint.lox.Stmt.Print;
+import com.craftint.lox.Stmt.Var;
 
 /**
  * Interpreter
  */
-class Interpreter implements Expr.Visitor<Object> {
+class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
+    private Environment environment = new Environment();
 
-    void interpret(Expr expression) {
+    void interpret(List<Stmt> statements) {
         try {
-            Object value = evaluate(expression);
-            System.out.println(stringify(value));
+            for (Stmt statement : statements) {
+                execute(statement);
+            }
         } catch (RuntimeError e) {
             Lox.runtimeError(e);
         }
+    }
+
+    private void execute(Stmt statement) {
+        statement.accept(this);
     }
 
     private String stringify(Object obj) {
@@ -34,6 +49,28 @@ class Interpreter implements Expr.Visitor<Object> {
         }
 
         return obj.toString();
+    }
+
+    @Override
+    public Object visitAssignExpr(Assign expr) {
+        Object value = evaluate(expr.value);
+        environment.assign(expr.name, value);
+        return value;
+    }
+
+    @Override
+    public Object visitVariableExpr(Variable expr) {
+        return environment.get(expr.name);
+    }
+
+    @Override
+    public Void visitVarStmt(Var stmt) {
+        Object value = null;
+        if (stmt.initializer != null) {
+            value = evaluate(stmt.initializer);
+        }
+        environment.define(stmt.name.lexeme, value);
+        return null;
     }
 
     @Override
@@ -156,5 +193,37 @@ class Interpreter implements Expr.Visitor<Object> {
 
     private Object evaluate(Expr expr) {
         return expr.accept(this);
+    }
+
+    @Override
+    public Void visitExpressionStmt(Expression stmt) {
+        evaluate(stmt.expression);
+        return null;
+    }
+
+    @Override
+    public Void visitPrintStmt(Print stmt) {
+        Object value = evaluate(stmt.expression);
+        System.out.println(stringify(value));
+        return null;
+    }
+
+    @Override
+    public Void visitBlockStmt(Block stmt) {
+        executeBlock(stmt.statements, new Environment(environment));
+        return null;
+    }
+
+    private void executeBlock(List<Stmt> statements, Environment environment) {
+        Environment previous = this.environment;
+
+        try {
+            this.environment = environment;
+            for (Stmt statement : statements) {
+                execute(statement);
+            }
+        } finally {
+            this.environment = previous;
+        }
     }
 }
