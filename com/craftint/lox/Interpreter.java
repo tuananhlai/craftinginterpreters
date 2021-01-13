@@ -4,6 +4,7 @@ import com.craftint.lox.Expr.Assign;
 import com.craftint.lox.Expr.Binary;
 import com.craftint.lox.Expr.Grouping;
 import com.craftint.lox.Expr.Literal;
+import com.craftint.lox.Expr.Logical;
 import com.craftint.lox.Expr.Ternary;
 import com.craftint.lox.Expr.Unary;
 import com.craftint.lox.Expr.Variable;
@@ -13,8 +14,11 @@ import java.util.List;
 import com.craftint.lox.RuntimeError;
 import com.craftint.lox.Stmt.Block;
 import com.craftint.lox.Stmt.Expression;
+import com.craftint.lox.Stmt.If;
 import com.craftint.lox.Stmt.Print;
 import com.craftint.lox.Stmt.Var;
+import com.craftint.lox.Stmt.Vars;
+import com.craftint.lox.Stmt.While;
 
 /**
  * Interpreter
@@ -225,5 +229,51 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         } finally {
             this.environment = previous;
         }
+    }
+
+    @Override
+    public Void visitIfStmt(If stmt) {
+        if (isTruthy(evaluate(stmt.condition))) {
+            execute(stmt.thenBranch);
+        } else if (stmt.elseBranch != null) {
+            execute(stmt.elseBranch);
+        }
+
+        return null;
+    }
+
+    @Override
+    public Object visitLogicalExpr(Logical expr) {
+        Object left = evaluate(expr.left);
+        Object right = evaluate(expr.right);
+
+        switch (expr.operator.type) {
+            case OR:
+                if (!isTruthy(left))
+                    return isTruthy(right);
+            case AND:
+                if (isTruthy(left))
+                    return isTruthy(right);
+            default:
+                return isTruthy(left);
+        }
+    }
+
+    @Override
+    public Void visitVarsStmt(Vars stmt) {
+        for (Var varDeclaration : stmt.varDeclarations) {
+            visitVarStmt(varDeclaration);
+        }
+
+        return null;
+    }
+
+    @Override
+    public Void visitWhileStmt(While stmt) {
+        while (isTruthy(evaluate(stmt.condition))) {
+            execute(stmt.body);
+        }
+
+        return null;
     }
 }

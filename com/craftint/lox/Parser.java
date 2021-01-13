@@ -1,7 +1,10 @@
 package com.craftint.lox;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+
+import com.craftint.lox.Stmt.Var;
 
 import static com.craftint.lox.TokenType.*;
 
@@ -34,7 +37,7 @@ class Parser {
     private Stmt declaration() {
         try {
             if (match(VAR))
-                return varDeclaration();
+                return varDeclarations();
 
             return statement();
         } catch (ParseError error) {
@@ -43,27 +46,102 @@ class Parser {
         }
     }
 
-    private Stmt varDeclaration() {
+    private Stmt varDeclarations() {
+        List<Stmt.Var> varDeclarations = new ArrayList<>();
+
+        do {
+            varDeclarations.add(varDeclaration());
+        } while (match(COMMA));
+
+        consume(SEMICOLON, "Expect ; after var declaration");
+
+        return new Stmt.Vars(varDeclarations);
+    }
+
+    private Var varDeclaration() {
         Token name = consume(IDENTIFIER, "Expect variable name.");
 
         Expr initializer = null;
         if (match(EQUAL)) {
-            initializer = expression();
+            initializer = assignment();
         }
-
-        consume(SEMICOLON, "Expect ; after var declaration");
 
         return new Stmt.Var(name, initializer);
     }
 
     private Stmt statement() {
+        if (match(FOR))
+            return forStatement();
+        if (match(IF)) {
+            return ifStatement();
+        }
         if (match(PRINT))
             return printStatement();
+        if (match(WHILE))
+            return whileStatement();
         if (match(LEFT_BRACE)) {
             return new Stmt.Block(block());
         }
 
         return expressionStatement();
+    }
+
+    private Stmt forStatement() {
+        consume(LEFT_PAREN, "'(' expected after 'for'.");
+        Stmt initializer;
+        if (match(SEMICOLON)) {
+            initializer = null;
+        } else if (match(VAR)) {
+            initializer = varDeclarations();
+        } else {
+            initializer = expressionStatement();
+        }
+        Expr condition = check(SEMICOLON) ? null : expression();
+        consume(SEMICOLON, "; expected");
+
+        Expr increment = check(RIGHT_PAREN) ? null : expression();
+
+        consume(RIGHT_PAREN, "')' expected after 'for' condition.");
+
+        Stmt body = statement();
+
+        if (increment != null) {
+            body = new Stmt.Block(Arrays.asList(body, new Stmt.Expression(increment)));
+        }
+
+        if (condition == null) {
+            condition = new Expr.Literal(true);
+        }
+        body = new Stmt.While(condition, body);
+
+        if (initializer != null) {
+            body = new Stmt.Block(Arrays.asList(initializer, body));
+        }
+        return body;
+    }
+
+    private Stmt whileStatement() {
+        consume(LEFT_PAREN, "'(' expected after while.");
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "')' expected after while condition.");
+
+        Stmt body = statement();
+
+        return new Stmt.While(condition, body);
+    }
+
+    private Stmt ifStatement() {
+        consume(LEFT_PAREN, "'(' expected after if.");
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "')' expected after if condition.");
+
+        Stmt thenBranch = statement();
+        Stmt elseBranch = null;
+        if (match(ELSE)) {
+            elseBranch = statement();
+        }
+
+        return new Stmt.If(condition, thenBranch, elseBranch);
     }
 
     private List<Stmt> block() {
@@ -90,24 +168,7 @@ class Parser {
     }
 
     private Expr expression() {
-        return assignment();
-    }
-
-    private Expr assignment() {
-        Expr expr = comma(); // left-hand side
-
-        if (match(EQUAL)) {
-            Token equals = previous();
-            Expr value = assignment(); // right-hand side
-
-            if (expr instanceof Expr.Variable) {
-                Token name = ((Expr.Variable) expr).name;
-                return new Expr.Assign(name, value);
-            }
-            error(equals, "Invalid assignment target.");
-        }
-
-        return expr;
+        return comma();
     }
 
     /**
@@ -116,12 +177,29 @@ class Parser {
      * @return
      */
     private Expr comma() {
-        Expr expr = ternary();
+        Expr expr = assignment();
 
         while (match(COMMA)) {
             Token operator = previous();
-            Expr right = ternary();
+            Expr right = assignment();
             expr = new Expr.Binary(expr, operator, right);
+        }
+
+        return expr;
+    }
+
+    private Expr assignment() {
+        Expr expr = ternary(); // left-hand side
+
+        if (match(EQUAL)) {
+            Token equals = previous();
+            Expr value = expression(); // right-hand side
+
+            if (expr instanceof Expr.Variable) {
+                Token name = ((Expr.Variable) expr).name;
+                return new Expr.Assign(name, value);
+            }
+            error(equals, "Invalid assignment target.");
         }
 
         return expr;
@@ -142,7 +220,7 @@ class Parser {
      * @return
      */
     private Expr ternary() {
-        Expr condition = equality();
+        Expr condition = or();
 
         if (match(QUESTION)) {
             Expr second = ternary();
@@ -154,6 +232,30 @@ class Parser {
         }
 
         return condition;
+    }
+
+    private Expr or() {
+        Expr expr = and();
+
+        while (match(OR)) {
+            Token operator = previous();
+            Expr right = and();
+            expr = new Expr.Logical(expr, operator, right);
+        }
+
+        return expr;
+    }
+
+    private Expr and() {
+        Expr expr = equality();
+
+        while (match(AND)) {
+            Token operator = previous();
+            Expr right = equality();
+            expr = new Expr.Logical(expr, operator, right);
+        }
+
+        return expr;
     }
 
     private Expr equality() {
@@ -205,14 +307,13 @@ class Parser {
     }
 
     private Expr unary() {
-        Expr expr = primary();
-
-        while (match(BANG, MINUS)) {
+        if (match(BANG, MINUS)) {
             Token operator = previous();
-            expr = new Expr.Unary(operator, expr);
+            Expr right = unary();
+            return new Expr.Unary(operator, right);
         }
 
-        return expr;
+        return primary();
     }
 
     private Expr primary() {
