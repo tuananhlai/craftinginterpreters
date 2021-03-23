@@ -7,4 +7,10 @@ if (a == 0) {
 	print 100;
 }
 
+fun sayHi(first, last) {
+	print "Hi, " + first + " " + last + "!";
+}
+
+sayHi(("Dear", "Deal"), "Reader");
+
 print clock;
