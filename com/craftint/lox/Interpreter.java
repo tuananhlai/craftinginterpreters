@@ -14,6 +14,7 @@ import com.craftint.lox.Expr.Unary;
 import com.craftint.lox.Expr.Variable;
 import com.craftint.lox.Stmt.Block;
 import com.craftint.lox.Stmt.Expression;
+import com.craftint.lox.Stmt.Function;
 import com.craftint.lox.Stmt.If;
 import com.craftint.lox.Stmt.Print;
 import com.craftint.lox.Stmt.Var;
@@ -263,7 +264,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         return null;
     }
 
-    private void executeBlock(List<Stmt> statements, Environment environment) {
+    void executeBlock(List<Stmt> statements, Environment environment) {
         Environment previous = this.environment;
 
         try {
@@ -319,6 +320,13 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             execute(stmt.body);
         }
 
+        return null;
+    }
+
+    @Override
+    public Void visitFunctionStmt(Function stmt) {
+        LoxFunction function = new LoxFunction(stmt);
+        environment.define(stmt.name.lexeme, function);
         return null;
     }
 }

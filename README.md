@@ -1,6 +1,6 @@
 # Crafting Interpreters
 
-This is my code as I follow the book [Crafting Interpreters](craftinginterpreters.com).
+This is my implementation of the Lox programming language as I follow the book [Crafting Interpreters](craftinginterpreters.com).
 
 ## Setup
 
